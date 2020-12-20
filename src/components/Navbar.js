@@ -10,14 +10,15 @@ const Navbar = ({ user, handleSignout }) => (
         <NavLink to="/" className="nav-link">
           <span className="app-title">
             <img
-              src="https://icon.now.sh/account_balance/f90"
+              src="https://img.icons8.com/dusk/2x/home.png"
               alt="App Icon"
               className="app-icon"
             />
-            AmplifyAgora
+            Udemy.serverless
           </span>
         </NavLink>
       </Nav.Item>
+
       {/* Navbar Items */}
       <div className="nav-items">
         <Nav.Item index="2">

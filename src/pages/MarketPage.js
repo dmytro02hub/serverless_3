@@ -1,42 +1,40 @@
 import React from "react";
-import { API, graphqlOperation, Auth } from "aws-amplify";
-import { Loading, Tabs, Icon } from "element-react";
-import { Link } from "react-router-dom";
+import { API, graphqlOperation } from "aws-amplify";
+// import { getMarket } from "../graphql/queries";
 import {
   onCreateProduct,
   onUpdateProduct,
   onDeleteProduct,
 } from "../graphql/subscriptions";
-import Product from "../components/Product";
+import { Loading, Tabs, Icon } from "element-react";
+import { Link } from "react-router-dom";
 import NewProduct from "../components/NewProduct";
-//import { getMarket } from "../graphql/queries";
+import Product from "../components/Product";
 import { formatProductDate } from "../utils";
 
-const getMarket = `
-  query GetMarket($id: ID!) {
-    getMarket(id: $id) {
-      id
-      name
-      products (sortDirection: DESC, limit: 999) {
-        items {
-          id
-          description
-          marketID
-          price
-          shipped
-          owner
-          file {
-            key
-          }
-          createdAt
+const getMarket = `query GetMarket($id: ID!) {
+  getMarket(id: $id) {
+    id
+    name
+    products(sortDirection: DESC, limit: 999) {
+      items {
+        id
+        description
+        price
+        shipped
+        owner
+        file {
+          key
         }
-        nextToken
+        createdAt
       }
-      tags
-      owner
-      createdAt
+      nextToken
     }
+    tags
+    owner
+    createdAt
   }
+}
 `;
 
 class MarketPage extends React.Component {
@@ -47,12 +45,10 @@ class MarketPage extends React.Component {
     isEmailVerified: false,
   };
 
-  async componentDidMount() {
-    const user = await Auth.currentUserInfo();
-
+  componentDidMount() {
     this.handleGetMarket();
     this.createProductListener = API.graphql(
-      graphqlOperation(onCreateProduct, { owner: user.attributes.sub })
+      graphqlOperation(onCreateProduct)
     ).subscribe({
       next: (productData) => {
         const createdProduct = productData.value.data.onCreateProduct;
@@ -65,16 +61,14 @@ class MarketPage extends React.Component {
         this.setState({ market });
       },
     });
-
     this.updateProductListener = API.graphql(
-      graphqlOperation(onUpdateProduct, { owner: user.attributes.sub })
+      graphqlOperation(onUpdateProduct)
     ).subscribe({
       next: (productData) => {
         const updatedProduct = productData.value.data.onUpdateProduct;
         const updatedProductIndex = this.state.market.products.items.findIndex(
           (item) => item.id === updatedProduct.id
         );
-
         const updatedProducts = [
           ...this.state.market.products.items.slice(0, updatedProductIndex),
           updatedProduct,
@@ -85,9 +79,8 @@ class MarketPage extends React.Component {
         this.setState({ market });
       },
     });
-
     this.deleteProductListener = API.graphql(
-      graphqlOperation(onDeleteProduct, { owner: user.attributes.sub })
+      graphqlOperation(onDeleteProduct)
     ).subscribe({
       next: (productData) => {
         const deletedProduct = productData.value.data.onDeleteProduct;
@@ -102,9 +95,9 @@ class MarketPage extends React.Component {
   }
 
   componentWillUnmount() {
-    if (this.createProductListener) this.createProductListener.unsubscribe();
-    if (this.updateProductListener) this.updateProductListener.unsubscribe();
-    if (this.deleteProductListener) this.deleteProductListener.unsubscribe();
+    this.createProductListener.unsubscribe();
+    this.updateProductListener.unsubscribe();
+    this.deleteProductListener.unsubscribe();
   }
 
   handleGetMarket = async () => {
@@ -112,7 +105,6 @@ class MarketPage extends React.Component {
       id: this.props.marketId,
     };
     const result = await API.graphql(graphqlOperation(getMarket, input));
-    console.log({ result });
     this.setState({ market: result.data.getMarket, isLoading: false }, () => {
       this.checkMarketOwner();
       this.checkEmailVerified();
@@ -129,33 +121,35 @@ class MarketPage extends React.Component {
 
   checkEmailVerified = () => {
     const { userAttributes } = this.props;
-    if (userAttributes)
+    if (userAttributes) {
       this.setState({ isEmailVerified: userAttributes.email_verified });
+    }
   };
 
   render() {
     const { market, isLoading, isMarketOwner, isEmailVerified } = this.state;
+
     return isLoading ? (
       <Loading fullscreen={true} />
     ) : (
       <>
-        {/* Back button */}
+        {/* Back Button */}
         <Link className="link" to="/">
           Back to Markets List
         </Link>
 
-        {/* Market Metadata */}
+        {/* Market MetaData */}
         <span className="items-center pt-2">
           <h2 className="mb-mr">{market.name}</h2>- {market.owner}
         </span>
         <div className="items-center pt-2">
-          <span style={{ color: "var(--lightSquidInk", paddingBottom: "1em" }}>
-            <Icon className="icon" name="date" />
+          <span style={{ color: "var(--lightSquidInk)", paddingBottom: "1em" }}>
+            <Icon name="date" className="icon" />
             {formatProductDate(market.createdAt)}
           </span>
         </div>
 
-        {/* New product */}
+        {/* New Product */}
         <Tabs type="border-card" value={isMarketOwner ? "1" : "2"}>
           {isMarketOwner && (
             <Tabs.Pane
@@ -176,12 +170,14 @@ class MarketPage extends React.Component {
               )}
             </Tabs.Pane>
           )}
+
           {/* Products List */}
           <Tabs.Pane
             label={
               <>
                 <Icon name="menu" className="icon" />
-                Products ({market.products.items.length})
+                Products (
+                {market.products.item ? market.products.items.length : 0})
               </>
             }
             name="2"

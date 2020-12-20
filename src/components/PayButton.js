@@ -1,39 +1,37 @@
 import React from "react";
 import { API, graphqlOperation } from "aws-amplify";
-import StripeCheckout from "react-stripe-checkout";
-import { Notification, Message } from "element-react";
 import { getUser } from "../graphql/queries";
 import { createOrder } from "../graphql/mutations";
+import StripeCheckout from "react-stripe-checkout";
+import { Notification, Message } from "element-react";
 import { history } from "../App";
 
 const stripeConfig = {
-  publishableAPIKey: "pk_test_GTPLqQHtT2mlBbReMgAk16ig00BpX7b6gi",
   currency: "USD",
+  publishableAPIKey: "pk_test_u45gFnpf3jZbVWTiLE0JUZQx00GU2M5y6R",
 };
 
-const PayButton = ({ product, user, userAttributes }) => {
+const PayButton = ({ product, userAttributes }) => {
   const getOwnerEmail = async (ownerId) => {
     try {
       const input = { id: ownerId };
       const result = await API.graphql(graphqlOperation(getUser, input));
-      console.log("getresult", { result });
       return result.data.getUser.email;
-    } catch (error) {
-      console.error(`Error fetching product owner's email`, error);
+    } catch (err) {
+      console.error(`Error fetching product owner's email`, err);
     }
   };
+
   const createShippingAddress = (source) => ({
     city: source.address_city,
     country: source.address_country,
     address_line1: source.address_line1,
-    adress_state: source.address_state,
+    address_state: source.address_state,
     address_zip: source.address_zip,
   });
 
   const handleCharge = async (token) => {
     try {
-      console.log({ productOwner: product.owner });
-      debugger;
       const ownerEmail = await getOwnerEmail(product.owner);
       console.log({ ownerEmail });
       const result = await API.post("orderlambda", "/charge", {
@@ -43,6 +41,7 @@ const PayButton = ({ product, user, userAttributes }) => {
             currency: stripeConfig.currency,
             amount: product.price,
             description: product.description,
+            shipped: product.shipped,
           },
           email: {
             customerEmail: userAttributes.email,
@@ -51,12 +50,15 @@ const PayButton = ({ product, user, userAttributes }) => {
           },
         },
       });
-      console.log({ result });
+
+      console.log(result);
+
       if (result.charge.status === "succeeded") {
         let shippingAddress = null;
         if (product.shipped) {
           shippingAddress = createShippingAddress(result.charge.source);
         }
+
         const input = {
           orderUserId: userAttributes.sub,
           orderProductId: product.id,
@@ -67,13 +69,13 @@ const PayButton = ({ product, user, userAttributes }) => {
           graphqlOperation(createOrder, { input })
         );
         console.log({ order });
-
         Notification({
           title: "Success",
           message: `${result.message}`,
           type: "success",
           duration: 3000,
         });
+
         setTimeout(() => {
           history.push("/");
           Message({
@@ -84,15 +86,14 @@ const PayButton = ({ product, user, userAttributes }) => {
           });
         }, 3000);
       }
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      console.error(err);
       Notification.error({
         title: "Error",
-        message: `${error.message || "Error processing order"}`,
+        message: `${err.message || "Error processing order"}`,
       });
     }
   };
-
   return (
     <StripeCheckout
       token={handleCharge}
@@ -101,8 +102,8 @@ const PayButton = ({ product, user, userAttributes }) => {
       amount={product.price}
       currency={stripeConfig.currency}
       stripeKey={stripeConfig.publishableAPIKey}
-      shippingAddress={product.shipped}
       billingAddress={product.shipped}
+      shippingAddress={product.shipped}
       locale="auto"
       allowRememberMe={false}
     />

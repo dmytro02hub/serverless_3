@@ -1,10 +1,10 @@
 import React from "react";
 import { graphqlOperation } from "aws-amplify";
 import { Connect } from "aws-amplify-react";
-import { Loading, Card, Icon, Tag } from "element-react";
-import { Link } from "react-router-dom";
 import { listMarkets } from "../graphql/queries";
 import { onCreateMarket } from "../graphql/subscriptions";
+import { Loading, Card, Icon, Tag } from "element-react";
+import { Link } from "react-router-dom";
 import Error from "./Error";
 
 const MarketList = ({ searchResults }) => {
@@ -27,7 +27,6 @@ const MarketList = ({ searchResults }) => {
       {({ data, loading, errors }) => {
         if (errors.length > 0) return <Error errors={errors} />;
         if (loading || !data.listMarkets) return <Loading fullscreen={true} />;
-
         const markets =
           searchResults.length > 0 ? searchResults : data.listMarkets.items;
 
@@ -35,19 +34,20 @@ const MarketList = ({ searchResults }) => {
           <>
             {searchResults.length > 0 ? (
               <h2 className="text-green">
-                <Icon className="icon" name="check" type="success" />
+                <Icon type="success" name="check" className="icon" />
                 {searchResults.length} Results
               </h2>
             ) : (
               <h2 className="header">
                 <img
-                  src="https://icon.now.sh/store_mall_directory/527FFF"
+                  src="https://img.icons8.com/dusk/2x/collectibles.png"
                   alt="Store Icon"
                   className="large-icon"
                 />
                 Markets
               </h2>
             )}
+
             {markets.map((market) => (
               <div key={market.id} className="my-2">
                 <Card
@@ -64,13 +64,14 @@ const MarketList = ({ searchResults }) => {
                         {market.name}
                       </Link>
                       <span style={{ color: "var(--darkAmazonOrange)" }}>
-                        {(market.products.items &&
-                          market.products.items.length) ||
-                          "0"}
+                        {market.products.items
+                          ? market.products.items.length
+                          : 0}
                       </span>
                       <img
-                        src="https://icon.now.sh/shopping_cart/f60"
+                        src="https://img.icons8.com/ios-glyphs/2x/buy.png"
                         alt="Shopping Cart"
+                        className="large-icon"
                       />
                     </span>
                     <div style={{ color: "var(--lightSquidInk)" }}>
@@ -80,7 +81,7 @@ const MarketList = ({ searchResults }) => {
                   <div>
                     {market.tags &&
                       market.tags.map((tag) => (
-                        <Tag className="mx-1" key={tag} type="danger">
+                        <Tag key={tag} type="danger" className="mx-1">
                           {tag}
                         </Tag>
                       ))}

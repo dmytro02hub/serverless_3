@@ -1,13 +1,13 @@
 import React from "react";
-import { API, graphqlOperation } from "aws-amplify";
-import { S3Image } from "aws-amplify-react";
-import PayButton from "./PayButton";
-import { Link } from "react-router-dom";
 // prettier-ignore
 import { Notification, Popover, Button, Dialog, Card, Form, Input, Radio } from "element-react";
+import { API, graphqlOperation } from "aws-amplify";
+import { S3Image } from "aws-amplify-react";
 import { convertCentsToDollars, convertDollarsToCents } from "../utils";
 import { UserContext } from "../App";
+import PayButton from "./PayButton";
 import { updateProduct, deleteProduct } from "../graphql/mutations";
+import { Link } from "react-router-dom";
 
 class Product extends React.Component {
   state = {
@@ -38,8 +38,8 @@ class Product extends React.Component {
         message: "Product successfully updated!",
         type: "success",
       });
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(`Failed to update product with id: ${productId}`, err);
     }
   };
 
@@ -49,16 +49,15 @@ class Product extends React.Component {
       const input = {
         id: productId,
       };
-      const result = await API.graphql(
-        graphqlOperation(deleteProduct, { input })
-      );
+      await API.graphql(graphqlOperation(deleteProduct, { input }));
+
       Notification({
         title: "Success",
         message: "Product successfully deleted!",
         type: "success",
       });
-    } catch (error) {
-      console.error(`Failed to delete product with id ${productId}`, error);
+    } catch (err) {
+      console.error(`Failed to delete product with id ${productId}`, err);
     }
   };
 
@@ -67,17 +66,19 @@ class Product extends React.Component {
     const {
       updateProductDialog,
       deleteProductDialog,
-      shipped,
       description,
       price,
+      shipped,
     } = this.state;
+
     return (
       <UserContext.Consumer>
-        {({ user, userAttributes }) => {
+        {({ userAttributes }) => {
           const isProductOwner =
             userAttributes && userAttributes.sub === product.owner;
           const isEmailVerified =
             userAttributes && userAttributes.email_verified;
+
           return (
             <div className="card-container">
               <Card bodyStyle={{ padding: 0, minWidth: "200px" }}>
@@ -101,13 +102,12 @@ class Product extends React.Component {
                   </div>
                   <div className="text-right">
                     <span className="mx-1">
-                      ${convertCentsToDollars(product.price)}
+                      $ {convertCentsToDollars(product.price)}
                     </span>
                     {isEmailVerified ? (
                       !isProductOwner && (
                         <PayButton
                           product={product}
-                          user={user}
                           userAttributes={userAttributes}
                         />
                       )
@@ -119,7 +119,7 @@ class Product extends React.Component {
                   </div>
                 </div>
               </Card>
-              {/* Update / Delete product buttons */}
+              {/* Update / Delete Product Buttons */}
               <div className="text-center">
                 {isProductOwner && (
                   <>
@@ -131,8 +131,8 @@ class Product extends React.Component {
                         this.setState({
                           updateProductDialog: true,
                           description: product.description,
-                          shipped: product.shipped,
                           price: convertCentsToDollars(product.price),
+                          shipped: product.shipped,
                         })
                       }
                     />
@@ -181,7 +181,7 @@ class Product extends React.Component {
                 )}
               </div>
 
-              {/* Update product dialog */}
+              {/* Update Product Dialog */}
               <Dialog
                 title="Update Product"
                 size="large"
@@ -193,10 +193,10 @@ class Product extends React.Component {
                   <Form labelPosition="top">
                     <Form.Item label="Update Description">
                       <Input
+                        type="text"
                         icon="information"
-                        placeholder="Product Description"
+                        placeholder="Description"
                         value={description}
-                        trim={true}
                         onChange={(description) =>
                           this.setState({ description })
                         }
@@ -211,7 +211,7 @@ class Product extends React.Component {
                         onChange={(price) => this.setState({ price })}
                       />
                     </Form.Item>
-                    <Form.Item label="Update shipping">
+                    <Form.Item label="Update Shipping">
                       <div className="text-center">
                         <Radio
                           value="true"

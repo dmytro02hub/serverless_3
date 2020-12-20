@@ -1,15 +1,14 @@
 import React from "react";
 import { API, graphqlOperation, Auth, Hub } from "aws-amplify";
+import { getUser } from "./graphql/queries";
+import { registerUser } from "./graphql/mutations";
 import { Authenticator, AmplifyTheme } from "aws-amplify-react";
 import { Router, Route } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
-import { getUser } from "./graphql/queries";
-import { registerUser } from "./graphql/mutations";
 import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
 import MarketPage from "./pages/MarketPage";
 import Navbar from "./components/Navbar";
-
 import "./App.css";
 
 export const history = createBrowserHistory();
@@ -19,13 +18,12 @@ export const UserContext = React.createContext();
 class App extends React.Component {
   state = {
     user: null,
-    userAttributes: {},
+    userAttributes: null,
   };
 
-  async componentDidMount() {
-    await this.getUserData();
+  componentDidMount() {
+    this.getUserData();
     Hub.listen("auth", this, "onHubCapsule");
-    console.dir(AmplifyTheme);
   }
 
   getUserData = async () => {
@@ -38,7 +36,6 @@ class App extends React.Component {
   getUserAttributes = async (authUserData) => {
     const attributesArr = await Auth.userAttributes(authUserData);
     const attributesObj = Auth.attributesToObject(attributesArr);
-
     this.setState({ userAttributes: attributesObj });
   };
 
@@ -66,8 +63,7 @@ class App extends React.Component {
       id: signInData.signInUserSession.idToken.payload.sub,
     };
     const { data } = await API.graphql(graphqlOperation(getUser, getUserInput));
-    // if we can't get a user (meaning the user hasn't been registered before,
-    // then we execute registerUsre)
+    // if we can't get a user (meaning the user hasn't been registered before), then we execute registerUser
     if (!data.getUser) {
       try {
         const registerUserInput = {
@@ -76,13 +72,12 @@ class App extends React.Component {
           email: signInData.signInUserSession.idToken.payload.email,
           registered: true,
         };
-
         const newUser = await API.graphql(
           graphqlOperation(registerUser, { input: registerUserInput })
         );
         console.log({ newUser });
-      } catch (error) {
-        console.error("Error registering new user", error);
+      } catch (err) {
+        console.error("Error registering new user", err);
       }
     }
   };
@@ -90,21 +85,23 @@ class App extends React.Component {
   handleSignout = async () => {
     try {
       await Auth.signOut();
-    } catch (error) {
-      console.error("Error siging out user", error);
+    } catch (err) {
+      console.error("Error signing out user", err);
     }
   };
 
   render() {
     const { user, userAttributes } = this.state;
+
     return !user ? (
       <Authenticator theme={theme} />
     ) : (
       <UserContext.Provider value={{ user, userAttributes }}>
         <Router history={history}>
           <>
-            {/* Navbar */}
+            {/* Navigation */}
             <Navbar user={user} handleSignout={this.handleSignout} />
+
             {/* Routes */}
             <div className="app-container">
               <Route exact path="/" component={HomePage} />
@@ -118,9 +115,9 @@ class App extends React.Component {
                 path="/markets/:marketId"
                 component={({ match }) => (
                   <MarketPage
-                    marketId={match.params.marketId}
                     user={user}
                     userAttributes={userAttributes}
+                    marketId={match.params.marketId}
                   />
                 )}
               />
@@ -131,16 +128,25 @@ class App extends React.Component {
     );
   }
 }
-console.log(AmplifyTheme.button);
+
 const theme = {
   ...AmplifyTheme,
-  button: { ...AmplifyTheme.button, backgroundColor: "var(--amazonOrange)" },
-  sectionBody: { ...AmplifyTheme.sectionBody, padding: "5px" },
+  navBar: {
+    ...AmplifyTheme.navBar,
+    backgroundColor: "#ffc0cb",
+  },
+  button: {
+    ...AmplifyTheme.button,
+    backgroundColor: "var(--amazonOrange)",
+  },
+  sectionBody: {
+    ...AmplifyTheme.sectionBody,
+    padding: "5px",
+  },
   sectionHeader: {
     ...AmplifyTheme.sectionHeader,
     backgroundColor: "var(--squidInk)",
   },
 };
 
-// export default withAuthenticator(App, true,[],null,theme);
 export default App;

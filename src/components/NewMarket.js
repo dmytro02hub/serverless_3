@@ -7,11 +7,11 @@ import { UserContext } from "../App";
 
 class NewMarket extends React.Component {
   state = {
-    addMarketDialog: false,
+    name: "",
     tags: ["Arts", "Web Dev", "Technology", "Crafts", "Entertainment"],
     selectedTags: [],
     options: [],
-    name: "",
+    addMarketDialog: false,
   };
 
   handleAddMarket = async (user) => {
@@ -27,12 +27,12 @@ class NewMarket extends React.Component {
       );
       console.log({ result });
       console.info(`Created market: id ${result.data.createMarket.id}`);
-      this.setState({ name: "", selectedTags: [], options: [] });
-    } catch (error) {
-      console.error("Error adding new market", error);
+      this.setState({ name: "", selectedTags: [] });
+    } catch (err) {
+      console.error("Error adding new market", err);
       Notification.error({
         title: "Error",
-        message: `${error.message || "Error adding market"}`,
+        message: `${err.message || "Error adding market"}`,
       });
     }
   };
@@ -59,12 +59,13 @@ class NewMarket extends React.Component {
                   onClick={() => this.setState({ addMarketDialog: true })}
                 />
               </h1>
-              <Form inline={true} onSubmi={this.props.handleSearch}>
+
+              <Form inline={true} onSubmit={this.props.handleSearch}>
                 <Form.Item>
                   <Input
                     placeholder="Search Markets..."
-                    icon="circle-cross"
                     value={this.props.searchTerm}
+                    icon="circle-cross"
                     onIconClick={this.props.handleClearSearch}
                     onChange={this.props.handleSearchChange}
                   />
@@ -81,6 +82,7 @@ class NewMarket extends React.Component {
                 </Form.Item>
               </Form>
             </div>
+
             <Dialog
               title="Create New Market"
               visible={this.state.addMarketDialog}
@@ -92,7 +94,7 @@ class NewMarket extends React.Component {
                 <Form labelPosition="top">
                   <Form.Item label="Add Market Name">
                     <Input
-                      placeholder="Marke Name"
+                      placeholder="Market Name"
                       trim={true}
                       onChange={(name) => this.setState({ name })}
                       value={this.state.name}
@@ -110,7 +112,11 @@ class NewMarket extends React.Component {
                       remote={true}
                     >
                       {this.state.options.map((option) => (
-                        <Select.Option key={option.value} {...option} />
+                        <Select.Option
+                          key={option.value}
+                          label={option.label}
+                          value={option.value}
+                        />
                       ))}
                     </Select>
                   </Form.Item>

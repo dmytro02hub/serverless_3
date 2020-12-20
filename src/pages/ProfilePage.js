@@ -1,39 +1,38 @@
 import React from "react";
-import { API, Auth, graphqlOperation } from "aws-amplify";
+import { Auth, API, graphqlOperation } from "aws-amplify";
 // prettier-ignore
 import { Table, Button, Notification, MessageBox, Message, Tabs, Icon, Form, Dialog, Input, Card, Tag } from 'element-react'
 import { convertCentsToDollars, formatOrderDate } from "../utils";
-const getUser = /* GraphQL */ `
-  query GetUser($id: ID!) {
-    getUser(id: $id) {
-      id
-      username
-      email
-      registered
-      orders(sortDirection: ASC) {
-        items {
+
+const getUser = `query GetUser($id: ID!) {
+  getUser(id: $id) {
+    id
+    username
+    email
+    registered
+    orders(sortDirection: DESC, limit: 999) {
+      items {
+        id
+        createdAt
+        product {
           id
+          owner
+          price
           createdAt
-          product {
-            id
-            description
-            price
-            shipped
-            owner
-            createdAt
-          }
-          shippingAddress {
-            city
-            country
-            address_line1
-            adress_state
-            address_zip
-          }
+          description
         }
-        nextToken
+        shippingAddress {
+          city
+          country
+          address_line1
+          address_state
+          address_zip
+        }
       }
+      nextToken
     }
   }
+}
 `;
 
 class ProfilePage extends React.Component {
@@ -48,7 +47,7 @@ class ProfilePage extends React.Component {
       { prop: "value", width: "330" },
       {
         prop: "tag",
-        width: 150,
+        width: "150",
         render: (row) => {
           if (row.name === "Email") {
             const emailVerified = this.props.userAttributes.email_verified;
@@ -67,9 +66,9 @@ class ProfilePage extends React.Component {
             case "Email":
               return (
                 <Button
+                  onClick={() => this.setState({ emailDialog: true })}
                   type="info"
                   size="small"
-                  onClick={() => this.setState({ emailDialog: true })}
                 >
                   Edit
                 </Button>
@@ -77,9 +76,9 @@ class ProfilePage extends React.Component {
             case "Delete Profile":
               return (
                 <Button
+                  onClick={this.handleDeleteProfile}
                   type="danger"
                   size="small"
-                  onClick={this.handleDeleteProfile}
                 >
                   Delete
                 </Button>
@@ -101,8 +100,7 @@ class ProfilePage extends React.Component {
   getUserOrders = async (userId) => {
     const input = { id: userId };
     const result = await API.graphql(graphqlOperation(getUser, input));
-    if (result.data.getUser)
-      this.setState({ orders: result.data.getUser.orders.items });
+    this.setState({ orders: result.data.getUser.orders.items });
   };
 
   handleUpdateEmail = async () => {
@@ -117,11 +115,11 @@ class ProfilePage extends React.Component {
       if (result === "SUCCESS") {
         this.sendVerificationCode("email");
       }
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      console.error(err);
       Notification.error({
         title: "Error",
-        message: `${error.message || "Error updating attribute"}`,
+        message: `${err.message || "Error updating email"}`,
       });
     }
   };
@@ -148,11 +146,11 @@ class ProfilePage extends React.Component {
         type: `${result.toLowerCase()}`,
       });
       setTimeout(() => window.location.reload(), 3000);
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      console.error(err);
       Notification.error({
         title: "Error",
-        message: `${error.message || "Error updating email"}`,
+        message: `${err.message || "Error updating email"}`,
       });
     }
   };
@@ -170,8 +168,8 @@ class ProfilePage extends React.Component {
       .then(async () => {
         try {
           await this.props.user.deleteUser();
-        } catch (error) {
-          console.log(error);
+        } catch (err) {
+          console.error(err);
         }
       })
       .catch(() => {
@@ -188,8 +186,8 @@ class ProfilePage extends React.Component {
       columns,
       emailDialog,
       email,
-      verificationCode,
       verificationForm,
+      verificationCode,
     } = this.state;
     const { user, userAttributes } = this.props;
 
@@ -200,7 +198,7 @@ class ProfilePage extends React.Component {
             <Tabs.Pane
               label={
                 <>
-                  <Icon className="icon" name="document" />
+                  <Icon name="document" className="icon" />
                   Summary
                 </>
               }
@@ -235,8 +233,9 @@ class ProfilePage extends React.Component {
                 rowClassName={(row) =>
                   row.name === "Delete Profile" && "delete-profile"
                 }
-              ></Table>
+              />
             </Tabs.Pane>
+
             <Tabs.Pane
               label={
                 <>
@@ -247,6 +246,7 @@ class ProfilePage extends React.Component {
               name="2"
             >
               <h2 className="header">Order History</h2>
+
               {orders.map((order) => (
                 <div className="mb-1" key={order.id}>
                   <Card>
@@ -259,12 +259,12 @@ class ProfilePage extends React.Component {
                       <p>Purchased on {formatOrderDate(order.createdAt)}</p>
                       {order.shippingAddress && (
                         <>
-                          Shipping Address{" "}
+                          Shipping Address
                           <div className="ml-2">
                             <p>{order.shippingAddress.address_line1}</p>
                             <p>
                               {order.shippingAddress.city},{" "}
-                              {order.shippingAddress.adress_state}{" "}
+                              {order.shippingAddress.address_state}{" "}
                               {order.shippingAddress.country}{" "}
                               {order.shippingAddress.address_zip}
                             </p>
@@ -277,7 +277,8 @@ class ProfilePage extends React.Component {
               ))}
             </Tabs.Pane>
           </Tabs>
-          {/* Email dialog */}
+
+          {/* Email Dialog */}
           <Dialog
             size="large"
             customClass="dialog"
